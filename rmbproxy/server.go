@@ -16,6 +16,20 @@ func errorReply(w http.ResponseWriter, status int, message string) {
 	fmt.Fprintf(w, "{\"status\": \"error\", \"message\": \"%s\"}", message)
 }
 
+func (a *App) NewTwinClient(twinID int) (TwinClient, error) {
+	log.Debug().Int("twin", twinID).Msg("resolving twin")
+
+	twin, err := a.resolver.client.GetTwin(uint32(twinID))
+	if err != nil {
+		return nil, err
+	}
+	log.Debug().Str("ip", twin.IP).Msg("resolved twin ip")
+
+	return &twinClient{
+		dstIP: twin.IP,
+	}, nil
+}
+
 func (a *App) sendMessage(w http.ResponseWriter, r *http.Request) {
 	twinIDString := mux.Vars(r)["twin_id"]
 
@@ -28,7 +42,7 @@ func (a *App) sendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c, err := a.resolver.Resolve(twinID)
+	c, err := a.NewTwinClient(twinID)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create mux server")
 	}
@@ -58,7 +72,7 @@ func (a *App) getResult(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c, err := a.resolver.Resolve(twinID)
+	c, err := a.NewTwinClient(twinID)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create mux server")
 	}
@@ -84,7 +98,7 @@ func CreateServer(substrate string, address string) (*http.Server, error) {
 	}
 
 	a := &App{
-		resolver: resolver,
+		resolver: *resolver,
 	}
 
 	router.HandleFunc("/twin/{twin_id:[0-9]+}", a.sendMessage)

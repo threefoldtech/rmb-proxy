@@ -12,12 +12,19 @@ type flags struct {
 	address   string
 }
 type MessageIdentifier struct {
+	ID       string `json:"id"`
 	Retqueue string `json:"retqueue"`
+}
+
+type Resp struct {
+	Status  int    `json:"status"`
+	Message string `json:"message"`
+	Error   string `json:"error"`
 }
 
 // App is the main app objects
 type App struct {
-	resolver TwinResolver
+	resolver TwinExplorerResolver
 }
 
 type TwinExplorerResolver struct {
@@ -26,10 +33,6 @@ type TwinExplorerResolver struct {
 
 type twinClient struct {
 	dstIP string
-}
-
-type TwinResolver interface {
-	Resolve(twinID int) (TwinClient, error)
 }
 
 type TwinClient interface {

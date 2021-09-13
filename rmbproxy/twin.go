@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/zos/pkg/substrate"
 )
 
@@ -19,7 +18,7 @@ func resultURL(twinIP string) string {
 	return fmt.Sprintf("http://%s:8051/zbus-result", twinIP)
 }
 
-func NewTwinResolver(substrateURL string) (TwinResolver, error) {
+func NewTwinResolver(substrateURL string) (*TwinExplorerResolver, error) {
 	client, err := substrate.NewSubstrate(substrateURL)
 	if err != nil {
 		return nil, err
@@ -27,20 +26,6 @@ func NewTwinResolver(substrateURL string) (TwinResolver, error) {
 
 	return &TwinExplorerResolver{
 		client: client,
-	}, nil
-}
-
-func (r TwinExplorerResolver) Resolve(twinID int) (TwinClient, error) {
-	log.Debug().Int("twin", twinID).Msg("resolving twin")
-
-	twin, err := r.client.GetTwin(uint32(twinID))
-	if err != nil {
-		return nil, err
-	}
-	log.Debug().Str("ip", twin.IP).Msg("resolved twin ip")
-
-	return &twinClient{
-		dstIP: twin.IP,
 	}, nil
 }
 

@@ -11,12 +11,12 @@ import (
 	"github.com/threefoldtech/zos/pkg/substrate"
 )
 
-func submitURL(timeIP string) string {
-	return fmt.Sprintf("http://%s:8051/zbus-cmd", timeIP)
+func submitURL(twinIP string) string {
+	return fmt.Sprintf("http://%s:8051/zbus-cmd", twinIP)
 }
 
-func resultURL(timeIP string) string {
-	return fmt.Sprintf("http://%s:8051/zbus-result", timeIP)
+func resultURL(twinIP string) string {
+	return fmt.Sprintf("http://%s:8051/zbus-result", twinIP)
 }
 
 func NewTwinResolver(substrateURL string) (TwinResolver, error) {
@@ -30,10 +30,10 @@ func NewTwinResolver(substrateURL string) (TwinResolver, error) {
 	}, nil
 }
 
-func (r TwinExplorerResolver) Resolve(timeID int) (TwinClient, error) {
-	log.Debug().Int("twin", timeID).Msg("resolving twin")
+func (r TwinExplorerResolver) Resolve(twinID int) (TwinClient, error) {
+	log.Debug().Int("twin", twinID).Msg("resolving twin")
 
-	twin, err := r.client.GetTwin(uint32(timeID))
+	twin, err := r.client.GetTwin(uint32(twinID))
 	if err != nil {
 		return nil, err
 	}
@@ -57,29 +57,29 @@ func (c *twinClient) readError(r io.Reader) string {
 	return body.Message
 }
 
-func (c *twinClient) SubmitMessage(msg Message) error {
-	var buffer bytes.Buffer
-	if err := json.NewEncoder(&buffer).Encode(msg); err != nil {
-		return err
-	}
-	resp, err := http.Post(submitURL(c.dstIP), "application/json", &buffer)
+func (c *twinClient) SubmitMessage(msg bytes.Buffer) (string, error) {
+	resp, err := http.Post(submitURL(c.dstIP), "application/json", &msg)
 	// check on response for non-communication errors?
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("failed to Submit the message: %s (%s)", resp.Status, c.readError(resp.Body))
+		return "", fmt.Errorf("failed to Submit the message: %s (%s)", resp.Status, c.readError(resp.Body))
 	}
 
-	return nil
+	buffer := new(bytes.Buffer)
+	buffer.ReadFrom(resp.Body)
+	response := buffer.String()
+
+	return response, nil
 }
 
-func (c *twinClient) GetMessage(msg Message) (string, error) {
+func (c *twinClient) GetResult(msgIdentifier MessageIdentifier) (string, error) {
 	var buffer bytes.Buffer
-	if err := json.NewEncoder(&buffer).Encode(msg); err != nil {
+	if err := json.NewEncoder(&buffer).Encode(msgIdentifier); err != nil {
 		return "", err
 	}
 	resp, err := http.Post(resultURL(c.dstIP), "application/json", &buffer)
@@ -95,9 +95,8 @@ func (c *twinClient) GetMessage(msg Message) (string, error) {
 		return "", fmt.Errorf("failed to send remote: %s (%s)", resp.Status, c.readError(resp.Body))
 	}
 
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
-	response := buf.String()
+	buffer.ReadFrom(resp.Body)
+	response := buffer.String()
 
 	return response, err
 }

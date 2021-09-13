@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/rmb_proxy_server/rmbproxy"
@@ -28,31 +28,29 @@ func main() {
 	flag.Parse()
 
 	setupLogging(f.debug)
-	s, err := createServer(f)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to create mux server")
-	}
 
-	if err := s.ListenAndServe(); err != nil {
+	if err := app(f); err != nil {
+		log.Fatal().Msg(err.Error())
 		if err == http.ErrServerClosed {
 			log.Info().Msg("server stopped gracefully")
 		} else {
 			log.Error().Err(err).Msg("server stopped unexpectedly")
 		}
 	}
+
 }
 
-func createServer(f flags) (*http.Server, error) {
-	log.Info().Msg("Creating server")
-	router := mux.NewRouter().StrictSlash(true)
+func app(f flags) error {
+	s, err := rmbproxy.CreateServer(f.substrate, f.address)
+	if err != nil {
+		return errors.Wrap(err, "failed to create server")
+	}
 
-	// setup rmb
-	rmbproxy.Setup(router, f.substrate, f.address)
-
-	return &http.Server{
-		Handler: router,
-		Addr:    f.address,
-	}, nil
+	log.Info().Str("listening on", f.address).Msg("Server started ...")
+	if err := s.ListenAndServe(); err != nil {
+		return err
+	}
+	return nil
 }
 
 const (

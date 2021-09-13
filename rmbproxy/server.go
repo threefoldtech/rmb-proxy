@@ -1,14 +1,12 @@
 package rmbproxy
 
 import (
-	"encoding/json"
+	"bytes"
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/patrickmn/go-cache"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -20,11 +18,9 @@ func errorReply(w http.ResponseWriter, status int, message string) {
 
 func (a *App) sendMessage(w http.ResponseWriter, r *http.Request) {
 	twinIDString := mux.Vars(r)["twin_id"]
-	var msg Message
-	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
-		errorReply(w, http.StatusBadRequest, "couldn't parse json")
-		return
-	}
+
+	buffer := new(bytes.Buffer)
+	buffer.ReadFrom(r.Body)
 
 	twinID, err := strconv.Atoi(twinIDString)
 	if err != nil {
@@ -37,34 +33,7 @@ func (a *App) sendMessage(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Msg("failed to create mux server")
 	}
 
-	err = c.SubmitMessage(msg)
-	if err != nil {
-		errorReply(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(msg.Retqueue))
-}
-
-func (a *App) getMessage(w http.ResponseWriter, r *http.Request) {
-	twinIDString := mux.Vars(r)["twin_id"]
-	retueue := mux.Vars(r)["retqueue"]
-	var msg Message
-	msg.Retqueue = retueue
-
-	twinID, err := strconv.Atoi(twinIDString)
-	if err != nil {
-		errorReply(w, http.StatusBadRequest, "Invalid twinId")
-		return
-	}
-
-	c, err := a.resolver.Resolve(twinID)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to create mux server")
-	}
-
-	data, err := c.GetMessage(msg)
+	data, err := c.SubmitMessage(*buffer)
 	if err != nil {
 		errorReply(w, http.StatusBadRequest, err.Error())
 		return
@@ -75,21 +44,54 @@ func (a *App) getMessage(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(data))
 }
 
-// Setup is the server and do initial configurations
-func Setup(router *mux.Router, substrate string, hostAddress string) error {
-	c := cache.New(10*time.Minute, 15*time.Minute)
+func (a *App) getResult(w http.ResponseWriter, r *http.Request) {
+	twinIDString := mux.Vars(r)["twin_id"]
+	retqueue := mux.Vars(r)["retqueue"]
+
+	reqBody := MessageIdentifier{
+		Retqueue: retqueue,
+	}
+
+	twinID, err := strconv.Atoi(twinIDString)
+	if err != nil {
+		errorReply(w, http.StatusBadRequest, "Invalid twinId")
+		return
+	}
+
+	c, err := a.resolver.Resolve(twinID)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to create mux server")
+	}
+
+	data, err := c.GetResult(reqBody)
+	if err != nil {
+		errorReply(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(data))
+}
+
+func CreateServer(substrate string, address string) (*http.Server, error) {
+	log.Info().Msg("Creating server")
+	router := mux.NewRouter().StrictSlash(true)
+
 	resolver, err := NewTwinResolver(substrate)
 	if err != nil {
-		return errors.Wrap(err, "couldn't get a client to explorer resolver")
+		return nil, errors.Wrap(err, "couldn't get a client to explorer resolver")
 	}
 
 	a := &App{
 		resolver: resolver,
-		lruCache: c,
 	}
-	log.Info().Str("listening on", hostAddress).Msg("Server started ...")
-	router.HandleFunc("/twin/{twin_id:[0-9]+}", a.sendMessage)
-	router.HandleFunc("/twin/{twin_id:[0-9]+}/{retqueue}", a.getMessage)
 
-	return nil
+	router.HandleFunc("/twin/{twin_id:[0-9]+}", a.sendMessage)
+	router.HandleFunc("/twin/{twin_id:[0-9]+}/{retqueue}", a.getResult)
+
+	return &http.Server{
+		Handler: router,
+		Addr:    address,
+	}, nil
 }

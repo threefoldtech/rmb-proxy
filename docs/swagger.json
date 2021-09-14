@@ -1,0 +1,88 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/twin/{twin_id}": {
+            "post": {
+                "description": "submit the message",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Result"
+                ],
+                "summary": "submit the message",
+                "parameters": [
+                    {
+                        "description": "rmb.Message",
+                        "name": "msg",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "type": "integer",
+                        "description": "twin id",
+                        "name": "twin_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/twin/{twin_id}/{retqueue}": {
+            "get": {
+                "description": "Get the message result",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Result"
+                ],
+                "summary": "Get the message result",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "twin id",
+                        "name": "twin_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "message retqueue",
+                        "name": "retqueue",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

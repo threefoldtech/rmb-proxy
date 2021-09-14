@@ -1,0 +1,57 @@
+info:
+  contact: {}
+paths:
+  /twin/{twin_id}:
+    post:
+      consumes:
+      - application/json
+      description: submit the message
+      parameters:
+      - description: rmb.Message
+        in: body
+        name: msg
+        required: true
+        schema:
+          type: string
+      - description: twin id
+        in: path
+        name: twin_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: submit the message
+      tags:
+      - Result
+  /twin/{twin_id}/{retqueue}:
+    get:
+      consumes:
+      - application/json
+      description: Get the message result
+      parameters:
+      - description: twin id
+        in: path
+        name: twin_id
+        required: true
+        type: integer
+      - description: message retqueue
+        in: path
+        name: retqueue
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Get the message result
+      tags:
+      - Result
+swagger: "2.0"

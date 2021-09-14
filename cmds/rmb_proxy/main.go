@@ -10,20 +10,14 @@ import (
 	"github.com/threefoldtech/rmb_proxy_server/tools/logging"
 )
 
-type flags struct {
-	debug     string
-	substrate string
-	address   string
-}
-
 func main() {
-	f := flags{}
-	flag.StringVar(&f.debug, "log-level", "info", "log level [debug|info|warn|error|fatal|panic]")
-	flag.StringVar(&f.substrate, "substrate", "wss://explorer.devnet.grid.tf/ws", "substrate url")
-	flag.StringVar(&f.address, "address", ":8080", "explorer running ip address")
+	f := rmbproxy.Flags{}
+	flag.StringVar(&f.Debug, "log-level", "info", "log level [debug|info|warn|error|fatal|panic]")
+	flag.StringVar(&f.Substrate, "substrate", "wss://explorer.devnet.grid.tf/ws", "substrate url")
+	flag.StringVar(&f.Address, "address", ":8080", "explorer running ip address")
 	flag.Parse()
 
-	logging.SetupLogging(f.debug)
+	logging.SetupLogging(f.Debug)
 
 	if err := app(f); err != nil {
 		log.Fatal().Msg(err.Error())
@@ -36,13 +30,13 @@ func main() {
 
 }
 
-func app(f flags) error {
-	s, err := rmbproxy.CreateServer(f.substrate, f.address)
+func app(f rmbproxy.Flags) error {
+	s, err := rmbproxy.CreateServer(f.Substrate, f.Address)
 	if err != nil {
 		return errors.Wrap(err, "failed to create server")
 	}
 
-	log.Info().Str("listening on", f.address).Msg("Server started ...")
+	log.Info().Str("listening on", f.Address).Msg("Server started ...")
 	if err := s.ListenAndServe(); err != nil {
 		return err
 	}

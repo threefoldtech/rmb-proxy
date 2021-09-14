@@ -15,6 +15,11 @@ type MessageIdentifier struct {
 type App struct {
 	resolver TwinExplorerResolver
 }
+type Flags struct {
+	Debug     string
+	Substrate string
+	Address   string
+}
 
 type TwinExplorerResolver struct {
 	client *substrate.Substrate

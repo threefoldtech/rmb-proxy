@@ -6,8 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
-	"github.com/threefoldtech/rmb_proxy_server/pkg/logging"
-	"github.com/threefoldtech/rmb_proxy_server/pkg/rmbproxy"
+	"github.com/threefoldtech/rmb_proxy_server/internal/rmbproxy"
+	logging "github.com/threefoldtech/rmb_proxy_server/pkg"
 )
 
 func main() {

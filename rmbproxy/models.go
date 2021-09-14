@@ -6,20 +6,9 @@ import (
 	"github.com/threefoldtech/zos/pkg/substrate"
 )
 
-type flags struct {
-	debug     string
-	substrate string
-	address   string
-}
 type MessageIdentifier struct {
 	ID       string `json:"id"`
 	Retqueue string `json:"retqueue"`
-}
-
-type Resp struct {
-	Status  int    `json:"status"`
-	Message string `json:"message"`
-	Error   string `json:"error"`
 }
 
 // App is the main app objects

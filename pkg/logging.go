@@ -58,6 +58,7 @@ func formatLevel(i interface{}) string {
 	return l
 }
 
+// SetupLogging ...
 func SetupLogging(level string) {
 	if level == "debug" {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)

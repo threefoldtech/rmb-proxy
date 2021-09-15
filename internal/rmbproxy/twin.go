@@ -18,6 +18,7 @@ func resultURL(twinIP string) string {
 	return fmt.Sprintf("http://%s:8051/zbus-result", twinIP)
 }
 
+// NewTwinResolver : create a new substrate resolver
 func NewTwinResolver(substrateURL string) (*TwinExplorerResolver, error) {
 	client, err := substrate.NewSubstrate(substrateURL)
 	if err != nil {

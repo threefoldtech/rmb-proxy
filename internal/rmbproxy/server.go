@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	// swagger configuration
 	_ "github.com/threefoldtech/rmb_proxy_server/docs"
 
 	"github.com/gorilla/mux"
@@ -19,6 +20,7 @@ func errorReply(w http.ResponseWriter, status int, message string) {
 	fmt.Fprintf(w, "{\"status\": \"error\", \"message\": \"%s\"}", message)
 }
 
+// NewTwinClient : create new TwinClient
 func (a *App) NewTwinClient(twinID int) (TwinClient, error) {
 	log.Debug().Int("twin", twinID).Msg("resolving twin")
 
@@ -111,6 +113,7 @@ func (a *App) getResult(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(data))
 }
 
+// CreateServer : Create the app server
 // @title RMB proxy API
 // @version 1.0
 // @termsOfService http://swagger.io/terms/

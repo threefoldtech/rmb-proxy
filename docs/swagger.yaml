@@ -1,3 +1,45 @@
+definitions:
+  rmbproxy.Message:
+    properties:
+      cmd:
+        example: zos.statistics.get
+        type: string
+      dat:
+        type: string
+      dst:
+        items:
+          type: integer
+        type: array
+      err:
+        type: string
+      exp:
+        example: 0
+        type: integer
+      now:
+        example: 1631078674
+        type: integer
+      ret:
+        type: string
+      shm:
+        type: string
+      src:
+        example: 1
+        type: integer
+      try:
+        example: 2
+        type: integer
+      uid:
+        type: string
+      ver:
+        example: 1
+        type: integer
+    type: object
+  rmbproxy.MessageIdentifier:
+    properties:
+      retqueue:
+        example: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        type: string
+    type: object
 info:
   contact: {}
 paths:
@@ -12,7 +54,7 @@ paths:
         name: msg
         required: true
         schema:
-          type: string
+          $ref: '#/definitions/rmbproxy.Message'
       - description: twin id
         in: path
         name: twin_id
@@ -24,7 +66,7 @@ paths:
         "200":
           description: OK
           schema:
-            type: string
+            $ref: '#/definitions/rmbproxy.MessageIdentifier'
       summary: submit the message
       tags:
       - Result

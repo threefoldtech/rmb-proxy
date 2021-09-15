@@ -8,8 +8,7 @@ import (
 
 // MessageIdentifier to get the specific result
 type MessageIdentifier struct {
-	ID       string `json:"id"`
-	Retqueue string `json:"retqueue"`
+	Retqueue string `json:"retqueue" example:"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"`
 }
 
 // App is the main app objects

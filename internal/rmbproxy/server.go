@@ -41,9 +41,9 @@ func (a *App) NewTwinClient(twinID int) (TwinClient, error) {
 // @Tags Result
 // @Accept  json
 // @Produce  json
-// @Param msg body string true "rmb.Message"
+// @Param msg body Message true "rmb.Message"
 // @Param twin_id path int true "twin id"
-// @Success 200 {object} string
+// @Success 200 {object} MessageIdentifier
 // @Router /twin/{twin_id} [post]
 func (a *App) sendMessage(w http.ResponseWriter, r *http.Request) {
 	twinIDString := mux.Vars(r)["twin_id"]
@@ -59,7 +59,9 @@ func (a *App) sendMessage(w http.ResponseWriter, r *http.Request) {
 
 	c, err := a.NewTwinClient(twinID)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to create mux server")
+		log.Error().Err(err).Msg("failed to create TwinClient")
+		errorReply(w, http.StatusInternalServerError, "failed to create TwinClient")
+		return
 	}
 
 	data, err := c.SubmitMessage(*buffer)

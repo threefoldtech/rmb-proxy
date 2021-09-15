@@ -43,7 +43,7 @@ var doc = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/rmbproxy.Message"
                         }
                     },
                     {
@@ -58,7 +58,7 @@ var doc = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/rmbproxy.MessageIdentifier"
                         }
                     }
                 }
@@ -100,6 +100,67 @@ var doc = `{
                             "type": "string"
                         }
                     }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "rmbproxy.Message": {
+            "type": "object",
+            "properties": {
+                "cmd": {
+                    "type": "string",
+                    "example": "zos.statistics.get"
+                },
+                "dat": {
+                    "type": "string"
+                },
+                "dst": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "err": {
+                    "type": "string"
+                },
+                "exp": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "now": {
+                    "type": "integer",
+                    "example": 1631078674
+                },
+                "ret": {
+                    "type": "string"
+                },
+                "shm": {
+                    "type": "string"
+                },
+                "src": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "try": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "uid": {
+                    "type": "string"
+                },
+                "ver": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "rmbproxy.MessageIdentifier": {
+            "type": "object",
+            "properties": {
+                "retqueue": {
+                    "type": "string",
+                    "example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                 }
             }
         }

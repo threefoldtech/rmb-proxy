@@ -9,7 +9,6 @@ import (
 
 	// swagger configuration
 	_ "github.com/threefoldtech/rmb_proxy_server/docs"
-	"github.com/threefoldtech/zos/pkg/substrate"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -68,7 +67,6 @@ func (a *App) sendMessage(w http.ResponseWriter, r *http.Request) {
 
 	data, err := c.SubmitMessage(*buffer)
 	if err != nil {
-		// TODO: check for error type and return internal server error/bad request
 		errorReply(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -103,11 +101,7 @@ func (a *App) getResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c, err := a.NewTwinClient(twinID)
-	if errors.Is(err, substrate.ErrNotFound) {
-		log.Error().Err(err).Msg("failed to create mux server")
-		errorReply(w, http.StatusNotFound, err.Error())
-		return
-	} else if err != nil {
+	if err != nil {
 		log.Error().Err(err).Msg("failed to create mux server")
 		errorReply(w, http.StatusInternalServerError, err.Error())
 		return

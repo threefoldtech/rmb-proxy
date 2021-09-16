@@ -7,18 +7,18 @@ import (
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
-	"github.com/go-acme/lego/v4/challenge/http01"
-	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/registration"
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
@@ -37,12 +37,17 @@ type CertificateData struct {
 }
 
 type CertificateManager struct {
-	config CertificateConfig
+	config   CertificateConfig
+	provider *Provider
 }
 
 func NewCertificateManager(config CertificateConfig) *CertificateManager {
+	provider := &Provider{
+		tokenAuths: make(map[string]string),
+	}
 	return &CertificateManager{
-		config: config,
+		config:   config,
+		provider: provider,
 	}
 }
 
@@ -153,14 +158,9 @@ func (c *CertificateManager) EnsureCertificate() (CertificateData, error) {
 	// because we aren't running as root and can't bind a listener to port 80 and 443
 	// (used later when we attempt to pass challenges). Keep in mind that you still
 	// need to proxy challenge traffic to port 5002 and 5001.
-	httpProvider := http01.NewProviderServer("", "80")
-	err = client.Challenge.SetHTTP01Provider(httpProvider)
+	err = client.Challenge.SetHTTP01Provider(c.provider)
 	if err != nil {
 		return CertificateData{}, errors.Wrap(err, "couldn't listen on http port")
-	}
-	err = client.Challenge.SetTLSALPN01Provider(tlsalpn01.NewProviderServer("", "443"))
-	if err != nil {
-		return CertificateData{}, errors.Wrap(err, "couldn't listen on https port")
 	}
 
 	// New users will need to register
@@ -197,7 +197,6 @@ func (c *CertificateManager) EnsureCertificate() (CertificateData, error) {
 	if err != nil {
 		return CertificateData{}, errors.Wrap(err, "couldn't write key to disk")
 	}
-	syscall.Kill(syscall.Getpid(), syscall.SIGHUP)
 	return CertificateData{
 		KeyPath:  keyPath,
 		CertPath: certPath,
@@ -255,4 +254,56 @@ func (kpr *keypairReloader) GetCertificateFunc() func(*tls.ClientHelloInfo) (*tl
 		defer kpr.certMu.RUnlock()
 		return kpr.cert, nil
 	}
+}
+
+type Provider struct {
+	// token -> authorization text
+	tokenAuths map[string]string
+}
+
+func (p *Provider) Present(domain, token, keyAuth string) error {
+	p.tokenAuths[token] = keyAuth
+	return nil
+}
+func (p *Provider) CleanUp(domain, token, keyAuth string) error {
+	delete(p.tokenAuths, token)
+	return nil
+}
+
+func (p *Provider) handler(w http.ResponseWriter, req *http.Request) {
+	challengePrefix := "/.well-known/acme-challenge/"
+	path := req.URL.Path
+	log.Debug().Str("path", req.URL.Path).Msg("received a request")
+	if strings.HasPrefix(path, challengePrefix) {
+		token := strings.TrimPrefix(path, challengePrefix)
+		auth, ok := p.tokenAuths[token]
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(auth))
+		}
+	} else {
+		http.Redirect(w, req, "https://"+req.Host+req.RequestURI, http.StatusMovedPermanently)
+	}
+}
+
+func (c CertificateManager) ListenForChallenges() error {
+	log.Info().Msg("Creating server")
+	router := mux.NewRouter().StrictSlash(true)
+	router.PathPrefix("/").Handler(http.HandlerFunc(c.provider.handler))
+
+	s := &http.Server{
+		Handler: router,
+		Addr:    ":80",
+	}
+	if err := s.ListenAndServe(); err != nil {
+		if err == http.ErrServerClosed {
+			log.Info().Msg("server stopped gracefully")
+			return nil
+		} else {
+			return err
+		}
+	}
+	return nil
 }

@@ -15,10 +15,6 @@ const (
 	CertDefaultCacheDir = "/tmp/certs"
 )
 
-func redirectTLS(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "https://"+r.Host+r.RequestURI, http.StatusMovedPermanently)
-}
-
 func main() {
 	f := rmbproxy.Flags{}
 	flag.StringVar(&f.Debug, "log-level", "info", "log level [debug|info|warn|error|fatal|panic]")
@@ -54,15 +50,15 @@ func app(f rmbproxy.Flags) error {
 		CacheDir: f.CertCacheDir,
 	}
 	cm := rmbproxy.NewCertificateManager(config)
+	go func() {
+		if err := cm.ListenForChallenges(); err != nil {
+			log.Error().Err(err).Msg("error occurred when listening for challenges")
+		}
+	}()
 	kpr, err := rmbproxy.NewKeypairReloader(cm)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to initiate key reloader")
 	}
-	go func() {
-		if err := http.ListenAndServe(":80", http.HandlerFunc(redirectTLS)); err != nil {
-			log.Error().Err(err).Msg("ListenAndServe http error")
-		}
-	}()
 	s.TLSConfig = &tls.Config{
 		GetCertificate: kpr.GetCertificateFunc(),
 	}

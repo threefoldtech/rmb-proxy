@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"flag"
 	"net/http"
 
@@ -10,24 +11,29 @@ import (
 	logging "github.com/threefoldtech/rmb_proxy_server/pkg"
 )
 
+const (
+	DomainName   = "ads"
+	TLSEmail     = ""
+	CA           = "https://acme-staging-v02.api.letsencrypt.org/directory"
+	CertCacheDir = "/tmp/certs"
+)
+
+func redirectTLS(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "https://"+r.Host+r.RequestURI, http.StatusMovedPermanently)
+}
+
 func main() {
 	f := rmbproxy.Flags{}
 	flag.StringVar(&f.Debug, "log-level", "info", "log level [debug|info|warn|error|fatal|panic]")
 	flag.StringVar(&f.Substrate, "substrate", "wss://explorer.devnet.grid.tf/ws", "substrate url")
-	flag.StringVar(&f.Address, "address", ":8080", "explorer running ip address")
+	flag.StringVar(&f.Address, "address", ":443", "explorer running ip address")
 	flag.Parse()
 
 	logging.SetupLogging(f.Debug)
 
 	if err := app(f); err != nil {
 		log.Fatal().Msg(err.Error())
-		if err == http.ErrServerClosed {
-			log.Info().Msg("server stopped gracefully")
-		} else {
-			log.Error().Err(err).Msg("server stopped unexpectedly")
-		}
 	}
-
 }
 
 func app(f rmbproxy.Flags) error {
@@ -35,10 +41,33 @@ func app(f rmbproxy.Flags) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to create server")
 	}
+	config := rmbproxy.CertificateConfig{
+		Domain:   DomainName,
+		Email:    TLSEmail,
+		CA:       CA,
+		CacheDir: CertCacheDir,
+	}
+	cm := rmbproxy.NewCertificateManager(config)
+	kpr, err := rmbproxy.NewKeypairReloader(cm)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to initiate key reloader")
+	}
+	go func() {
+		if err := http.ListenAndServe(":80", http.HandlerFunc(redirectTLS)); err != nil {
+			log.Error().Err(err).Msg("ListenAndServe http error")
+		}
+	}()
+	s.TLSConfig = &tls.Config{
+		GetCertificate: kpr.GetCertificateFunc(),
+	}
 
 	log.Info().Str("listening on", f.Address).Msg("Server started ...")
-	if err := s.ListenAndServe(); err != nil {
-		return err
+	if err := s.ListenAndServeTLS("", ""); err != nil {
+		if err == http.ErrServerClosed {
+			log.Info().Msg("server stopped gracefully")
+		} else {
+			log.Error().Err(err).Msg("server stopped unexpectedly")
+		}
 	}
 	return nil
 }

@@ -2,6 +2,7 @@ package rmbproxy
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -38,7 +39,7 @@ func (a *App) NewTwinClient(twinID int) (TwinClient, error) {
 // sendMessage godoc
 // @Summary submit the message
 // @Description submit the message
-// @Tags Result
+// @Tags RMB
 // @Accept  json
 // @Produce  json
 // @Param msg body Message true "rmb.Message"
@@ -78,12 +79,12 @@ func (a *App) sendMessage(w http.ResponseWriter, r *http.Request) {
 // getResult godoc
 // @Summary Get the message result
 // @Description Get the message result
-// @Tags Result
+// @Tags RMB
 // @Accept  json
 // @Produce  json
 // @Param twin_id path int true "twin id"
 // @Param retqueue path string true "message retqueue"
-// @Success 200 {object} string ""
+// @Success 200 {array} Message
 // @Router /twin/{twin_id}/{retqueue} [get]
 func (a *App) getResult(w http.ResponseWriter, r *http.Request) {
 	twinIDString := mux.Vars(r)["twin_id"]
@@ -115,6 +116,24 @@ func (a *App) getResult(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(data))
 }
 
+// ping godoc
+// @Summary ping the server
+// @Description ping the server to check if it running
+// @Tags ping
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} string "pong"
+// @Router /ping [get]
+func (a *App) ping(w http.ResponseWriter, r *http.Request) {
+	ret := map[string]string{"ping": "pong"}
+
+	data, _ := json.Marshal(ret)
+
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(data))
+}
+
 // CreateServer : Create the app server
 // @title RMB proxy API
 // @version 1.0
@@ -140,6 +159,7 @@ func CreateServer(substrate string, address string) (*http.Server, error) {
 
 	router.HandleFunc("/twin/{twin_id:[0-9]+}", a.sendMessage)
 	router.HandleFunc("/twin/{twin_id:[0-9]+}/{retqueue}", a.getResult)
+	router.HandleFunc("/ping", a.ping)
 	router.PathPrefix("/swagger").Handler(httpSwagger.WrapHandler)
 
 	return &http.Server{

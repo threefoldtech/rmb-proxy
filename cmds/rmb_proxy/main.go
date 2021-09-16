@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	// CertDefaultCacheDir directory to keep the genreated certificates
 	CertDefaultCacheDir = "/tmp/certs"
 )
 

@@ -23,6 +23,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// CertificateConfig the config the user passes to the certificate manager
 type CertificateConfig struct {
 	Domain   string
 	Email    string
@@ -30,17 +31,20 @@ type CertificateConfig struct {
 	CacheDir string
 }
 
+// CertificateData the result of the generated certificate
 type CertificateData struct {
 	KeyPath  string
 	CertPath string
 	Fresh    bool
 }
 
+// CertificateManager manages certificate generation
 type CertificateManager struct {
 	config   CertificateConfig
 	provider *Provider
 }
 
+// NewCertificateManager creates a new certificate manager with the given config
 func NewCertificateManager(config CertificateConfig) *CertificateManager {
 	provider := &Provider{
 		tokenAuths: make(map[string]string),
@@ -51,23 +55,23 @@ func NewCertificateManager(config CertificateConfig) *CertificateManager {
 	}
 }
 
-type User struct {
+type user struct {
 	Email        string
 	Registration *registration.Resource
 	key          crypto.PrivateKey
 }
 
-func (u *User) GetEmail() string {
+func (u *user) GetEmail() string {
 	return u.Email
 }
-func (u User) GetRegistration() *registration.Resource {
+func (u user) GetRegistration() *registration.Resource {
 	return u.Registration
 }
-func (u *User) GetPrivateKey() crypto.PrivateKey {
+func (u *user) GetPrivateKey() crypto.PrivateKey {
 	return u.key
 }
 
-func readTlsCert(cert []byte, key []byte) (*x509.Certificate, error) {
+func readTLSCert(cert []byte, key []byte) (*x509.Certificate, error) {
 
 	tlsCert, err := tls.X509KeyPair(cert, key)
 	if err != nil {
@@ -84,6 +88,9 @@ func readTlsCert(cert []byte, key []byte) (*x509.Certificate, error) {
 	return crt, nil
 }
 
+// EnsureCertificate checks the current certificate's expiry, and generates
+//                   a new one if no cert is found or its expiry date is less
+//                   than 30 day from now. And returns the certificate data.
 func (c *CertificateManager) EnsureCertificate() (CertificateData, error) {
 	certPath := filepath.Join(c.config.CacheDir, "cert.pem")
 	keyPath := filepath.Join(c.config.CacheDir, "key.pem")
@@ -111,7 +118,7 @@ func (c *CertificateManager) EnsureCertificate() (CertificateData, error) {
 		newCert = true
 	}
 	if !newCert {
-		crt, err := readTlsCert(cert, key)
+		crt, err := readTLSCert(cert, key)
 		if err != nil {
 			log.Warn().Err(err).Msg("couldn't read old tls certificate")
 			newCert = true
@@ -136,7 +143,7 @@ func (c *CertificateManager) EnsureCertificate() (CertificateData, error) {
 		return CertificateData{}, errors.Wrap(err, "couldn't generate key")
 	}
 
-	myUser := User{
+	myUser := user{
 		Email: c.config.Email,
 		key:   privateKey,
 	}
@@ -205,14 +212,16 @@ func (c *CertificateManager) EnsureCertificate() (CertificateData, error) {
 	// ... all done.
 }
 
-type keypairReloader struct {
+// KeypairReloader to use with TLS servers for dynamic reloading
+type KeypairReloader struct {
 	certMu      sync.RWMutex
 	cert        *tls.Certificate
 	certManager *CertificateManager
 }
 
-func NewKeypairReloader(certManager *CertificateManager) (*keypairReloader, error) {
-	result := &keypairReloader{
+// NewKeypairReloader creates a new instance given the manager to create certs
+func NewKeypairReloader(certManager *CertificateManager) (*KeypairReloader, error) {
+	result := &KeypairReloader{
 		certManager: certManager,
 	}
 	certData, err := result.certManager.EnsureCertificate()
@@ -237,7 +246,7 @@ func NewKeypairReloader(certManager *CertificateManager) (*keypairReloader, erro
 	return result, nil
 }
 
-func (kpr *keypairReloader) reload(certPath, keyPath string) error {
+func (kpr *KeypairReloader) reload(certPath, keyPath string) error {
 	newCert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
 		return err
@@ -248,7 +257,8 @@ func (kpr *keypairReloader) reload(certPath, keyPath string) error {
 	return nil
 }
 
-func (kpr *keypairReloader) GetCertificateFunc() func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+// GetCertificateFunc returns a function that returns the up-to-date certificate
+func (kpr *KeypairReloader) GetCertificateFunc() func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
 	return func(clientHello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 		kpr.certMu.RLock()
 		defer kpr.certMu.RUnlock()
@@ -256,15 +266,19 @@ func (kpr *keypairReloader) GetCertificateFunc() func(*tls.ClientHelloInfo) (*tl
 	}
 }
 
+// Provider to use for presenting tokens when generating certs
 type Provider struct {
 	// token -> authorization text
 	tokenAuths map[string]string
 }
 
+// Present associates the token with keyAuth
 func (p *Provider) Present(domain, token, keyAuth string) error {
 	p.tokenAuths[token] = keyAuth
 	return nil
 }
+
+// CleanUp removes the token entry
 func (p *Provider) CleanUp(domain, token, keyAuth string) error {
 	delete(p.tokenAuths, token)
 	return nil
@@ -288,6 +302,8 @@ func (p *Provider) handler(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// ListenForChallenges handles http cert verification requests and redirects
+//                     all other requests to https
 func (c CertificateManager) ListenForChallenges() error {
 	log.Info().Msg("Creating server")
 	router := mux.NewRouter().StrictSlash(true)
@@ -301,9 +317,9 @@ func (c CertificateManager) ListenForChallenges() error {
 		if err == http.ErrServerClosed {
 			log.Info().Msg("server stopped gracefully")
 			return nil
-		} else {
-			return err
 		}
+		return err
+
 	}
 	return nil
 }

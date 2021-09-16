@@ -9,6 +9,7 @@ definitions:
       dst:
         items:
           type: integer
+          example: 2
         type: array
       err:
         type: string

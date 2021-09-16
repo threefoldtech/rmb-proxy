@@ -144,7 +144,8 @@ var doc = `{
                 "dst": {
                     "type": "array",
                     "items": {
-                        "type": "integer"
+                        "type": "integer",
+                        "example": 2
                     }
                 },
                 "err": {

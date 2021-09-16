@@ -1,5 +1,6 @@
 package rmbproxy
 
+// Message swagger example
 type Message struct {
 	Version    int      `json:"ver" example:"1"`
 	UID        string   `json:"uid" example:""`

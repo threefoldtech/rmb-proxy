@@ -18,9 +18,13 @@ type App struct {
 
 // Flags for the App cmd command
 type Flags struct {
-	Debug     string
-	Substrate string
-	Address   string
+	Debug        string
+	Substrate    string
+	Address      string
+	Domain       string
+	TLSEmail     string
+	CA           string
+	CertCacheDir string
 }
 
 // TwinExplorerResolver is Substrate resolver

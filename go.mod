@@ -3,6 +3,7 @@ module github.com/threefoldtech/rmb_proxy_server
 go 1.16
 
 require (
+	github.com/go-acme/lego/v4 v4.4.0
 	github.com/go-openapi/jsonreference v0.19.6 // indirect
 	github.com/go-openapi/swag v0.19.15 // indirect
 	github.com/gorilla/mux v1.8.0

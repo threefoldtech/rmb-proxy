@@ -23,6 +23,29 @@ var doc = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/ping": {
+            "get": {
+                "description": "ping the server to check if it running",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ping"
+                ],
+                "summary": "ping the server",
+                "responses": {
+                    "200": {
+                        "description": "pong",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/twin/{twin_id}": {
             "post": {
                 "description": "submit the message",
@@ -33,7 +56,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Result"
+                    "RMB"
                 ],
                 "summary": "submit the message",
                 "parameters": [
@@ -74,7 +97,7 @@ var doc = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Result"
+                    "RMB"
                 ],
                 "summary": "Get the message result",
                 "parameters": [
@@ -97,7 +120,10 @@ var doc = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/rmbproxy.Message"
+                            }
                         }
                     }
                 }

@@ -43,6 +43,21 @@ definitions:
 info:
   contact: {}
 paths:
+  /ping:
+    get:
+      consumes:
+      - application/json
+      description: ping the server to check if it running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: pong
+          schema:
+            type: string
+      summary: ping the server
+      tags:
+      - ping
   /twin/{twin_id}:
     post:
       consumes:
@@ -69,7 +84,7 @@ paths:
             $ref: '#/definitions/rmbproxy.MessageIdentifier'
       summary: submit the message
       tags:
-      - Result
+      - RMB
   /twin/{twin_id}/{retqueue}:
     get:
       consumes:
@@ -92,8 +107,10 @@ paths:
         "200":
           description: OK
           schema:
-            type: string
+            items:
+              $ref: '#/definitions/rmbproxy.Message'
+            type: array
       summary: Get the message result
       tags:
-      - Result
+      - RMB
 swagger: "2.0"

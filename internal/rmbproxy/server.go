@@ -103,13 +103,10 @@ func (a *App) getResult(w http.ResponseWriter, r *http.Request) {
 	c, err := a.NewTwinClient(twinID)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create mux server")
-		errorReply(w, http.StatusInternalServerError, err.Error())
-		return
 	}
 
 	data, err := c.GetResult(reqBody)
 	if err != nil {
-		// check for returned error type
 		errorReply(w, http.StatusBadRequest, err.Error())
 		return
 	}
